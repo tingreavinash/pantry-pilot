@@ -19,26 +19,27 @@ import dagger.hilt.android.lifecycle.HiltViewModel;
 @HiltViewModel
 public class MembersViewModel extends ViewModel {
 
-    public final MutableLiveData<List<Member>> members = new MutableLiveData<>();
-    public final MutableLiveData<List<ShoppingItem>> shoppingItems = new MutableLiveData<>();
     private final MemberRepository memberRepo;
     private final ShoppingRepository shoppingRepo;
     private final FirebaseAuth auth;
+
+    public final MutableLiveData<List<Member>> members = new MutableLiveData<>(new ArrayList<>());
+    public final MutableLiveData<List<ShoppingItem>> shoppingItems = new MutableLiveData<>(new ArrayList<>());
 
     @Inject
     public MembersViewModel(MemberRepository mr, ShoppingRepository sr, FirebaseAuth auth) {
         this.memberRepo = mr;
         this.shoppingRepo = sr;
         this.auth = auth;
-        String uid = auth.getCurrentUser() != null ? auth.getCurrentUser().getUid() : "";
-        if (!uid.isEmpty()) {
-            memberRepo.subscribeMembers(uid, members);
-            shoppingRepo.subscribeShoppingItems(uid, shoppingItems);
+        String uid = uid();
+        if (uid != null) {
+            memberRepo.subscribe(uid, members);
+            shoppingRepo.subscribe(uid, shoppingItems);
         }
     }
 
     private String uid() {
-        return auth.getCurrentUser().getUid();
+        return auth.getCurrentUser() != null ? auth.getCurrentUser().getUid() : null;
     }
 
     public void addMember(Member member) {
@@ -55,14 +56,6 @@ public class MembersViewModel extends ViewModel {
         int c = 0;
         for (ShoppingItem i : items) if (memberName.equals(i.assignedTo) && !i.bought) c++;
         return c;
-    }
-
-    public List<ShoppingItem> assignedItems(String memberName) {
-        List<ShoppingItem> items = shoppingItems.getValue();
-        List<ShoppingItem> result = new ArrayList<>();
-        if (items == null) return result;
-        for (ShoppingItem i : items) if (memberName.equals(i.assignedTo)) result.add(i);
-        return result;
     }
 
     @Override

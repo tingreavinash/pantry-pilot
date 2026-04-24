@@ -2,12 +2,9 @@ package com.pantrypilot.data.model;
 
 import java.util.List;
 
-/**
- * Mirrors Firestore: households/{uid}/meals/{docId}
- */
 public class Meal {
     public String id;
-    public String day;           // "Monday" … "Sunday"
+    public String day;
     public String mealName;
     public List<String> ingredients;
 

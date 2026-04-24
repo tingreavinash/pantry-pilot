@@ -2,9 +2,6 @@ package com.pantrypilot.data.model;
 
 import com.google.firebase.Timestamp;
 
-/**
- * Mirrors Firestore: households/{uid}/shoppingList/{docId}
- */
 public class ShoppingItem {
     public String id;
     public String name;

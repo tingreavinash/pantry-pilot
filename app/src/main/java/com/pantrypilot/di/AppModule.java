@@ -6,10 +6,10 @@ import androidx.room.Room;
 
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.FirebaseFirestoreSettings;
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.pantrypilot.data.local.AppDatabase;
 import com.pantrypilot.data.local.GroceryStoreDao;
-import com.pantrypilot.ui.common.ConnectivityObserver;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -35,7 +35,13 @@ public class AppModule {
     @Provides
     @Singleton
     public FirebaseFirestore provideFirestore() {
-        return FirebaseFirestore.getInstance();
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+        FirebaseFirestoreSettings settings = new FirebaseFirestoreSettings.Builder()
+                .setPersistenceEnabled(true)
+                .setCacheSizeBytes(FirebaseFirestoreSettings.CACHE_SIZE_UNLIMITED)
+                .build();
+        db.setFirestoreSettings(settings);
+        return db;
     }
 
     @Provides
@@ -62,11 +68,5 @@ public class AppModule {
     @Singleton
     public ExecutorService provideExecutorService() {
         return Executors.newFixedThreadPool(4);
-    }
-
-    @Provides
-    @Singleton
-    public ConnectivityObserver provideConnectivityObserver(@ApplicationContext Context context) {
-        return new ConnectivityObserver(context);
     }
 }

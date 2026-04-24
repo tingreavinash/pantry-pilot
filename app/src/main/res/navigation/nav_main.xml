@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/nav_main"
+    app:startDestination="@id/nav_dashboard">
+
+    <fragment
+        android:id="@+id/nav_dashboard"
+        android:name="com.pantrypilot.ui.dashboard.DashboardFragment"
+        android:label="Dashboard" />
+
+    <fragment
+        android:id="@+id/nav_pantry"
+        android:name="com.pantrypilot.ui.pantry.PantryFragment"
+        android:label="Pantry">
+        <action
+            android:id="@+id/action_pantry_to_barcode"
+            app:destination="@id/barcodeScannerFragment" />
+        <action
+            android:id="@+id/action_pantry_to_receipt"
+            app:destination="@id/receiptScannerFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/nav_shopping"
+        android:name="com.pantrypilot.ui.shopping.ShoppingFragment"
+        android:label="Shopping" />
+
+    <fragment
+        android:id="@+id/nav_meals"
+        android:name="com.pantrypilot.ui.meals.MealPlannerFragment"
+        android:label="Meals" />
+
+    <fragment
+        android:id="@+id/nav_members"
+        android:name="com.pantrypilot.ui.members.MembersFragment"
+        android:label="Members" />
+
+    <fragment
+        android:id="@+id/settingsFragment"
+        android:name="com.pantrypilot.ui.settings.SettingsFragment"
+        android:label="Settings" />
+
+    <fragment
+        android:id="@+id/barcodeScannerFragment"
+        android:name="com.pantrypilot.ui.pantry.BarcodeScannerFragment"
+        android:label="Scan Barcode" />
+
+    <fragment
+        android:id="@+id/receiptScannerFragment"
+        android:name="com.pantrypilot.ui.pantry.ReceiptScannerFragment"
+        android:label="Scan Receipt" />
+
+</navigation>

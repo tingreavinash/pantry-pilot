@@ -1,109 +1,86 @@
 # PantryPilot 🌿
 
-Smart home grocery management for multi-household use.
-Java · Jetpack Compose · Material You · Firebase · MVVM
+Smart home grocery management — Java + XML ViewBinding + Material 3 + Firebase
 
 ---
 
-## Prerequisites
+## Tech stack
 
-| Tool                  | Version                      |
-|-----------------------|------------------------------|
-| Android Studio        | Hedgehog (2023.1.1) or newer |
-| JDK                   | 17                           |
-| Android Gradle Plugin | 8.2.2                        |
-| Min SDK               | 30 (Android 11)              |
-| Target SDK            | 34                           |
+| Layer        | Technology                                    |
+|--------------|-----------------------------------------------|
+| Language     | Java 17                                       |
+| UI           | XML layouts + ViewBinding (no Compose)        |
+| Architecture | MVVM + Repository                             |
+| DI           | Hilt                                          |
+| Navigation   | Jetpack Navigation Component (Fragment-based) |
+| Firebase     | Auth · Firestore (offline-enabled) · FCM      |
+| Local DB     | Room                                          |
+| Background   | WorkManager                                   |
+| Camera       | CameraX + ML Kit (barcode + OCR)              |
+| Location     | Play Services Location + Geofencing           |
+| Build        | AGP 8.2.2 · Gradle 8.2 · JDK 17               |
+| Min SDK      | 30 (Android 11)                               |
 
 ---
 
-## Setup
+## First-time setup
 
-### 1. Firebase
+### 1. Add google-services.json
 
-This app shares an existing Firebase project (React web app + Android).
-
-1. Open [Firebase Console](https://console.firebase.google.com)
-2. Select your existing project → **Add app** → Android
-3. Package name: `com.pantrypilot`
-4. Download `google-services.json`
-5. Place it at: `app/google-services.json`
-
-> ⚠️ Do NOT commit `google-services.json` to version control.
-
-### 2. Firestore security rules
-
-The Android app uses the same collections as the web app.
-Ensure your rules allow authenticated users to read/write their household:
-
+Place your existing Firebase project's `google-services.json` at:
 ```
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /households/{userId}/{document=**} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-    }
-  }
-}
+app/google-services.json
 ```
 
-### 3. Firestore offline persistence
+The app shares collections with the React web app — no schema changes needed.
 
-Configured automatically in `PantryPilotApp.java`:
+### 2. Open in Android Studio
 
-```java
-FirebaseFirestoreSettings settings = new FirebaseFirestoreSettings.Builder()
-    .setPersistenceEnabled(true)
-    .setCacheSizeBytes(FirebaseFirestoreSettings.CACHE_SIZE_UNLIMITED)
-    .build();
+- Open the `pantrypilot/` folder as an existing project
+- Android Studio will prompt to sync Gradle — accept
+- JDK: use **Android Studio default JDK (17)**
+- Gradle distribution: **8.2** (set in `gradle/wrapper/gradle-wrapper.properties`)
+
+### 3. Build and run
 ```
-
-### 4. Lora font (optional, recommended)
-
-Download Lora from [Google Fonts](https://fonts.google.com/specimen/Lora):
-
-- `lora_regular.ttf`
-- `lora_semibold.ttf`
-- `lora_bold.ttf`
-
-Place in `app/src/main/res/font/`
-
-Then update `Theme.java` to enable the Lora font family for display/headline styles.
-
-### 5. Build + run
-
-```bash
 ./gradlew assembleDebug
-# or open in Android Studio and hit Run
+```
+
+or press **Run ▶** in Android Studio.
+
+---
+
+## Project structure
+
+```
+app/src/main/java/com/pantrypilot/
+├── PantryPilotApp.java          Hilt Application, notification channels
+├── di/
+│   └── AppModule.java           Firebase, Room, Executor Hilt bindings
+├── data/
+│   ├── model/                   PantryItem · ShoppingItem · Meal · Member
+│   ├── firebase/                AuthRepository · PantryRepository · ShoppingRepository
+│   │                            MealRepository · MemberRepository
+│   └── local/                   AppDatabase · GroceryStoreDao · GroceryStoreEntity
+├── ui/
+│   ├── MainActivity.java        Shell: BottomNav + NavHost + deep links + offline banner
+│   ├── auth/                    AuthActivity · LoginFragment · SignUpFragment · AuthViewModel
+│   ├── dashboard/               DashboardFragment · DashboardViewModel · RecentItemsAdapter
+│   ├── pantry/                  PantryFragment · PantryViewModel · PantryAdapter
+│   │                            BarcodeScannerFragment · ReceiptScannerFragment
+│   │                            ReceiptParser · ReceiptItemsAdapter
+│   ├── shopping/                ShoppingFragment · ShoppingViewModel · ShoppingAdapter
+│   ├── meals/                   MealPlannerFragment · MealViewModel · MealDayAdapter
+│   ├── members/                 MembersFragment · MembersViewModel · MembersAdapter
+│   │                            EmojiGridAdapter
+│   └── settings/                SettingsFragment · SettingsViewModel · StoresAdapter
+├── workers/                     ExpiryCheckWorker · LowStockWorker · ShoppingReminderWorker
+└── receivers/                   GeofenceBroadcastReceiver · BootReceiver
 ```
 
 ---
 
-## Architecture
-
-```
-UI Layer (Jetpack Compose)
-    │  observeAsState()
-    ▼
-ViewModel (Hilt, LiveData)
-    │  calls
-    ▼
-Repository (Firebase / Room)
-    │  addSnapshotListener() / Dao
-    ▼
-Firebase Firestore / Room DB
-```
-
-### Async pattern
-
-- All Firestore reads use `addSnapshotListener()` → `liveData.postValue()`
-- ViewModels expose `MutableLiveData<List<T>>`
-- Composables collect via `observeAsState()`
-- No Kotlin coroutines — pure Java Executors + Firebase Tasks API
-
----
-
-## Firestore Data Model
+## Firestore schema (shared with web app — unchanged)
 
 ```
 households/{uid}/
@@ -111,73 +88,106 @@ households/{uid}/
   shoppingList/  → name, category, quantity, unit, estimatedCost, bought, assignedTo, createdAt
   meals/         → day, mealName, ingredients[]
   members/       → name, avatarEmoji
-  fcmTokens/     → token, platform, updatedAt
-```
-
-> Schema is identical to the React web app — no changes made.
-
----
-
-## Features
-
-| Feature               | Status | Notes                                             |
-|-----------------------|--------|---------------------------------------------------|
-| Auth (email/password) | ✅      | Shared Firebase project                           |
-| Dashboard             | ✅      | 4 summary cards + recent activity                 |
-| Pantry CRUD           | ✅      | Swipe-to-delete, search, category filter          |
-| Shopping list         | ✅      | Auto-populate, assign members, running total      |
-| Meal planner          | ✅      | 7-day view, ingredient stock check                |
-| Members               | ✅      | Emoji avatar picker, assignment view              |
-| Settings              | ✅      | Household name, reminder, stores, sign out        |
-| Barcode scanner       | ✅      | CameraX + ML Kit + Open Food Facts API            |
-| Receipt OCR           | ✅      | ML Kit Text Recognition + Levenshtein fuzzy match |
-| Offline mode          | ✅      | Firestore persistence + amber banner              |
-| Push notifications    | ✅      | WorkManager (local, no Cloud Functions needed)    |
-| Geofencing            | ✅      | Room DB for stores, GeofencingClient              |
-| Material You          | ✅      | Forest green primary, amber secondary             |
-
----
-
-## Build Phases
-
-| Phase | Contents                                 |
-|-------|------------------------------------------|
-| 1     | Auth + MVVM + Dashboard + Pantry         |
-| 2     | Shopping + Meals + Members + Settings    |
-| 3     | Barcode Scanner + Open Food Facts        |
-| 4     | Offline persistence banner + WorkManager |
-| 5     | Receipt OCR + ReceiptParser              |
-| 6     | Geofencing + Room + BootReceiver         |
-
----
-
-## Deep Links
-
-All notifications deep-link to the relevant tab:
-
-```
-pantrypilot://tab/Dashboard
-pantrypilot://tab/Pantry
-pantrypilot://tab/Shopping
-pantrypilot://tab/Meals
-pantrypilot://tab/Members
+  fcmTokens/     → token, platform:"android", updatedAt
 ```
 
 ---
 
-## Android 11 Permission Notes
+## Key implementation notes
 
-**Background location** must be requested in two separate steps:
+### MVVM + LiveData pattern
 
-1. Request `ACCESS_FINE_LOCATION` first
-2. Only after granted → request `ACCESS_BACKGROUND_LOCATION`
-3. Never request both in the same `requestPermissions()` call
+```java
+// Repository posts to MutableLiveData via Firestore snapshot listener
+repo.subscribe(uid, pantryItems);   // addSnapshotListener → postValue()
 
-**Scoped storage**: Receipt photo picking uses `ActivityResultContracts.GetContent("image/*")` — no
-`READ_EXTERNAL_STORAGE` needed on API 30+.
+// Fragment observes
+viewModel.pantryItems.observe(getViewLifecycleOwner(), items -> {
+    adapter.updateItems(items);
+});
+```
+
+### Offline mode
+
+Firestore persistence is enabled in `AppModule.java`:
+
+```java
+new FirebaseFirestoreSettings.Builder()
+    .setPersistenceEnabled(true)
+    .setCacheSizeBytes(CACHE_SIZE_UNLIMITED)
+    .build();
+```
+
+The amber offline banner in `activity_main.xml` is shown/hidden by
+`ConnectivityManager.NetworkCallback` in `MainActivity`.
+
+### Background notifications (no Cloud Functions needed)
+
+Three `WorkManager` periodic workers run on-device:
+
+- `ExpiryCheckWorker` — daily, alerts on items expiring within 2 days
+- `LowStockWorker` — every 12 hours, alerts when 3+ items are below threshold
+- `ShoppingReminderWorker` — weekly, reminds on configured day/hour
+
+All workers use `Source.CACHE` for Firestore reads so they work fully offline.
+
+### Barcode scanner
+
+`BarcodeScannerFragment` uses CameraX `ImageAnalysis` + ML Kit `BarcodeScanning`.
+On a successful scan it calls the Open Food Facts API via `HttpURLConnection`
+on a background `ExecutorService` — no Retrofit dependency needed.
+
+### Android 11 background location (two-step)
+
+The spec requires background location for geofencing. Request flow:
+
+1. Request `ACCESS_FINE_LOCATION` first (in `SettingsFragment`)
+2. Only after granted, request `ACCESS_BACKGROUND_LOCATION` separately
+3. Never request both in the same call (Android 11 requirement)
+
+### Deep links from notifications
+
+All notifications use `PendingIntent` with URI scheme `pantrypilot://tab/{tab}`.
+`MainActivity.handleDeepLink()` maps the last path segment to the correct
+bottom nav destination.
 
 ---
 
-## License
+## Screens
 
-Private / internal use. Firebase project owned by the household admin account.
+| Screen          | Entry point                                                         |
+|-----------------|---------------------------------------------------------------------|
+| Login           | `AuthActivity` → `LoginFragment`                                    |
+| Sign up         | `SignUpFragment`                                                    |
+| Dashboard       | `DashboardFragment` — summary cards + recent activity               |
+| Pantry          | `PantryFragment` — search, add/edit/delete, stock chips             |
+| Shopping        | `ShoppingFragment` — checkbox, assign, auto-populate, running total |
+| Meal planner    | `MealPlannerFragment` — 7-day cards, ingredient stock check         |
+| Members         | `MembersFragment` — emoji grid avatar picker                        |
+| Settings        | `SettingsFragment` — household name, reminder, stores, sign out     |
+| Barcode scanner | `BarcodeScannerFragment` — CameraX + Open Food Facts                |
+| Receipt scanner | `ReceiptScannerFragment` — ML Kit OCR + Levenshtein fuzzy match     |
+
+---
+
+## Notification channels
+
+| Channel ID           | Purpose                      |
+|----------------------|------------------------------|
+| `expiry_alerts`      | Items expiring within 2 days |
+| `stock_alerts`       | 3+ items below min threshold |
+| `shopping_reminders` | Weekly grocery day reminder  |
+| `geofence_alerts`    | Near a saved grocery store   |
+
+---
+
+## Gradle / JDK versions
+
+| Tool                  | Version                     |
+|-----------------------|-----------------------------|
+| Android Gradle Plugin | 8.2.2                       |
+| Gradle distribution   | 8.2                         |
+| JDK                   | 17 (Android Studio default) |
+| `compileSdk`          | 34                          |
+| `minSdk`              | 30                          |
+| `targetSdk`           | 34                          |

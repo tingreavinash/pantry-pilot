@@ -1,3 +1,5 @@
+// ── MealViewModel.java ────────────────────────────────────────────────────────
+// Save to: ui/meals/MealViewModel.java
 package com.pantrypilot.ui.meals;
 
 import androidx.lifecycle.MutableLiveData;
@@ -11,6 +13,7 @@ import com.pantrypilot.data.model.Meal;
 import com.pantrypilot.data.model.PantryItem;
 import com.pantrypilot.data.model.ShoppingItem;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
@@ -25,12 +28,14 @@ public class MealViewModel extends ViewModel {
 
     public static final List<String> DAYS = Arrays.asList(
             "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday");
-    public final MutableLiveData<List<Meal>> meals = new MutableLiveData<>();
-    public final MutableLiveData<List<PantryItem>> pantryItems = new MutableLiveData<>();
+
     private final MealRepository mealRepo;
     private final PantryRepository pantryRepo;
     private final ShoppingRepository shoppingRepo;
     private final FirebaseAuth auth;
+
+    public final MutableLiveData<List<Meal>> meals = new MutableLiveData<>(new ArrayList<>());
+    public final MutableLiveData<List<PantryItem>> pantryItems = new MutableLiveData<>(new ArrayList<>());
 
     @Inject
     public MealViewModel(MealRepository mr, PantryRepository pr,
@@ -39,46 +44,56 @@ public class MealViewModel extends ViewModel {
         this.pantryRepo = pr;
         this.shoppingRepo = sr;
         this.auth = auth;
-        String uid = auth.getCurrentUser() != null ? auth.getCurrentUser().getUid() : "";
-        if (!uid.isEmpty()) {
-            mealRepo.subscribeMeals(uid, meals);
-            pantryRepo.subscribePantryItems(uid, pantryItems);
+        String uid = uid();
+        if (uid != null) {
+            mealRepo.subscribe(uid, meals);
+            pantryRepo.subscribe(uid, pantryItems);
         }
     }
 
+    private String uid() {
+        return auth.getCurrentUser() != null ? auth.getCurrentUser().getUid() : null;
+    }
+
     public void upsertMeal(Meal meal) {
-        mealRepo.upsertMeal(auth.getCurrentUser().getUid(), meal);
+        mealRepo.upsertMeal(uid(), meal);
+    }
+
+    /**
+     * Returns the meal for a given day or null
+     */
+    public Meal getMealForDay(String day) {
+        List<Meal> list = meals.getValue();
+        if (list == null) return null;
+        for (Meal m : list) if (day.equals(m.day)) return m;
+        return null;
+    }
+
+    public PantryItem.StockStatus ingredientStatus(String ingredient) {
+        List<PantryItem> pantry = pantryItems.getValue();
+        if (pantry == null) return PantryItem.StockStatus.OUT;
+        for (PantryItem p : pantry)
+            if (p.name.equalsIgnoreCase(ingredient.trim())) return p.getStockStatus();
+        return PantryItem.StockStatus.OUT;
     }
 
     public void addMissingToShoppingList(Meal meal) {
         if (meal.ingredients == null) return;
-        String uid = auth.getCurrentUser().getUid();
+        String uid = uid();
         List<PantryItem> pantry = pantryItems.getValue();
-
         Set<String> pantryNames = new HashSet<>();
-        if (pantry != null) {
+        if (pantry != null)
             for (PantryItem p : pantry) pantryNames.add(p.name.toLowerCase().trim());
-        }
-
-        for (String ingredient : meal.ingredients) {
-            if (!pantryNames.contains(ingredient.toLowerCase().trim())) {
+        for (String ing : meal.ingredients) {
+            if (!pantryNames.contains(ing.toLowerCase().trim())) {
                 ShoppingItem item = new ShoppingItem();
-                item.name = ingredient;
+                item.name = ing;
                 item.category = "Produce";
                 item.quantity = 1;
                 item.unit = "pcs";
                 shoppingRepo.addItem(uid, item);
             }
         }
-    }
-
-    public PantryItem.StockStatus ingredientStatus(String ingredient) {
-        List<PantryItem> pantry = pantryItems.getValue();
-        if (pantry == null) return PantryItem.StockStatus.OUT;
-        for (PantryItem p : pantry) {
-            if (p.name.equalsIgnoreCase(ingredient.trim())) return p.getStockStatus();
-        }
-        return PantryItem.StockStatus.OUT;
     }
 
     @Override

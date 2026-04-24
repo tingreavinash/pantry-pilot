@@ -11,6 +11,7 @@ import java.util.List;
 
 @Dao
 public interface GroceryStoreDao {
+
     @Query("SELECT * FROM grocery_stores")
     LiveData<List<GroceryStoreEntity>> getAllStores();
 

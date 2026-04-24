@@ -2,7 +2,6 @@ package com.pantrypilot.data.firebase;
 
 import androidx.lifecycle.MutableLiveData;
 
-import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
 import com.pantrypilot.data.model.Meal;
@@ -18,16 +17,16 @@ import javax.inject.Singleton;
 public class MealRepository {
 
     private final FirebaseFirestore db;
-    private ListenerRegistration mealListener;
+    private ListenerRegistration listener;
 
     @Inject
     public MealRepository(FirebaseFirestore db) {
         this.db = db;
     }
 
-    public void subscribeMeals(String uid, MutableLiveData<List<Meal>> liveData) {
-        if (mealListener != null) mealListener.remove();
-        mealListener = db.collection("households").document(uid)
+    public void subscribe(String uid, MutableLiveData<List<Meal>> liveData) {
+        if (listener != null) listener.remove();
+        listener = db.collection("households").document(uid)
                 .collection("meals")
                 .addSnapshotListener((snapshot, e) -> {
                     if (snapshot != null) {
@@ -41,28 +40,24 @@ public class MealRepository {
     }
 
     public void removeListener() {
-        if (mealListener != null) {
-            mealListener.remove();
-            mealListener = null;
+        if (listener != null) {
+            listener.remove();
+            listener = null;
         }
     }
 
-    /**
-     * Upsert a meal by its existing ID, or add a new document if ID is absent.
-     */
     public void upsertMeal(String uid, Meal meal) {
         Map<String, Object> data = new HashMap<>();
         data.put("day", meal.day);
         data.put("mealName", meal.mealName);
         data.put("ingredients", meal.ingredients);
 
-        CollectionReference col = db.collection("households").document(uid)
-                .collection("meals");
-
         if (meal.id != null && !meal.id.isEmpty()) {
-            col.document(meal.id).set(data);
+            db.collection("households").document(uid)
+                    .collection("meals").document(meal.id).set(data);
         } else {
-            col.add(data);
+            db.collection("households").document(uid)
+                    .collection("meals").add(data);
         }
     }
 }

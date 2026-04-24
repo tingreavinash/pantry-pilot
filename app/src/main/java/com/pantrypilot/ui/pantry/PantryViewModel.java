@@ -3,9 +3,11 @@ package com.pantrypilot.ui.pantry;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
 
+import com.google.firebase.auth.FirebaseAuth;
 import com.pantrypilot.data.firebase.PantryRepository;
 import com.pantrypilot.data.model.PantryItem;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import javax.inject.Inject;
@@ -15,70 +17,48 @@ import dagger.hilt.android.lifecycle.HiltViewModel;
 @HiltViewModel
 public class PantryViewModel extends ViewModel {
 
-    public final MutableLiveData<List<PantryItem>> pantryItems = new MutableLiveData<>();
-    public final MutableLiveData<String> searchQuery = new MutableLiveData<>("");
-    public final MutableLiveData<String> selectedCategory = new MutableLiveData<>("All");
+    public final MutableLiveData<List<PantryItem>> pantryItems = new MutableLiveData<>(new ArrayList<>());
+    private final PantryRepository repo;
+    private final FirebaseAuth auth;
     public final MutableLiveData<String> toastMessage = new MutableLiveData<>();
-    private final PantryRepository pantryRepo;
-    private String currentUid;
 
     @Inject
-    public PantryViewModel(PantryRepository pantryRepo) {
-        this.pantryRepo = pantryRepo;
-    }
-
-    public void init(String uid) {
-        this.currentUid = uid;
-        pantryRepo.subscribePantryItems(uid, pantryItems);
+    public PantryViewModel(PantryRepository repo, FirebaseAuth auth) {
+        this.repo = repo;
+        this.auth = auth;
+        String uid = uid();
+        if (uid != null) repo.subscribe(uid, pantryItems);
     }
 
     public void addItem(PantryItem item) {
-        pantryRepo.addItem(currentUid, item,
+        String uid = uid();
+        if (uid == null) return;
+        repo.addItem(uid, item,
                 () -> toastMessage.postValue("Item added"),
                 () -> toastMessage.postValue("Failed to add item"));
     }
 
     public void updateItem(PantryItem item) {
-        pantryRepo.updateItem(currentUid, item,
+        String uid = uid();
+        if (uid == null) return;
+        repo.updateItem(uid, item,
                 () -> toastMessage.postValue("Item updated"),
                 () -> toastMessage.postValue("Update failed"));
     }
 
     public void deleteItem(PantryItem item) {
-        pantryRepo.deleteItem(currentUid, item.id,
-                () -> toastMessage.postValue("Deleted"));
+        String uid = uid();
+        if (uid == null) return;
+        repo.deleteItem(uid, item.id, () -> toastMessage.postValue("Deleted"));
     }
 
-    /**
-     * Returns low stock count for dashboard summary
-     */
-    public int getLowStockCount() {
-        List<PantryItem> items = pantryItems.getValue();
-        if (items == null) return 0;
-        int count = 0;
-        for (PantryItem item : items) {
-            if (item.getStockStatus() != PantryItem.StockStatus.OK) count++;
-        }
-        return count;
-    }
-
-    /**
-     * Returns count of items expiring within 5 days
-     */
-    public int getExpiringCount() {
-        List<PantryItem> items = pantryItems.getValue();
-        if (items == null) return 0;
-        int count = 0;
-        for (PantryItem item : items) {
-            long days = item.daysUntilExpiry();
-            if (days >= 0 && days <= 5) count++;
-        }
-        return count;
+    private String uid() {
+        return auth.getCurrentUser() != null ? auth.getCurrentUser().getUid() : null;
     }
 
     @Override
     protected void onCleared() {
-        pantryRepo.removeListener();
+        repo.removeListener();
         super.onCleared();
     }
 }

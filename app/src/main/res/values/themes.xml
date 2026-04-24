@@ -1,10 +1,51 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Base Material You theme — Compose handles all actual theming;
-         this just satisfies the android:theme attribute in the manifest -->
-    <style name="Theme.PantryPilot" parent="android:Theme.Material.Light.NoActionBar">
+
+    <style name="Theme.PantryPilot" parent="Theme.Material3.Light.NoActionBar">
+        <item name="colorPrimary">@color/green_primary</item>
+        <item name="colorOnPrimary">@color/background</item>
+        <item name="colorPrimaryContainer">@color/card_green</item>
+        <item name="colorOnPrimaryContainer">@color/green_primary</item>
+        <item name="colorSecondary">@color/amber_secondary</item>
+        <item name="colorOnSecondary">@color/on_amber</item>
+        <item name="colorSecondaryContainer">#FEF3C7</item>
+        <item name="colorSurface">@color/surface</item>
+        <item name="colorOnSurface">@color/on_surface</item>
+        <item name="colorOnSurfaceVariant">@color/on_surface_variant</item>
+        <item name="colorError">@color/error</item>
+        <item name="android:colorBackground">@color/background</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
-        <item name="android:navigationBarColor">@android:color/transparent</item>
         <item name="android:windowLightStatusBar">true</item>
+        <item name="android:navigationBarColor">@color/surface</item>
     </style>
+
+    <!-- Bottom sheet rounded top corners -->
+    <style name="ThemeOverlay.PantryPilot.BottomSheet" parent="ThemeOverlay.Material3.BottomSheetDialog">
+        <item name="bottomSheetStyle">@style/Widget.PantryPilot.BottomSheet</item>
+    </style>
+
+    <style name="Widget.PantryPilot.BottomSheet" parent="Widget.Material3.BottomSheet">
+        <item name="shapeAppearanceOverlay">@style/ShapeAppearance.PantryPilot.BottomSheet</item>
+    </style>
+
+    <style name="ShapeAppearance.PantryPilot.BottomSheet" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSizeTopLeft">28dp</item>
+        <item name="cornerSizeTopRight">28dp</item>
+        <item name="cornerSizeBottomLeft">0dp</item>
+        <item name="cornerSizeBottomRight">0dp</item>
+    </style>
+
+    <!-- Toolbar title using default sans-serif-medium (swap to Lora if desired) -->
+    <style name="TextAppearance.PantryPilot.ToolbarTitle" parent="TextAppearance.Material3.TitleLarge">
+        <item name="android:textColor">@color/on_surface</item>
+    </style>
+
+    <!-- Display text style for the app name on login screen -->
+    <style name="TextAppearance.PantryPilot.Display" parent="TextAppearance.Material3.DisplaySmall">
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <dimen name="screen_min_height">600dp</dimen>
+
 </resources>

@@ -1,4 +1,52 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">PantryPilot</string>
+    <string name="tagline">Smart home grocery management</string>
+
+    <!-- Auth -->
+    <string name="email">Email</string>
+    <string name="password">Password</string>
+    <string name="password_hint">Password (min 6 chars)</string>
+    <string name="confirm_password">Confirm Password</string>
+    <string name="sign_in">Sign In</string>
+    <string name="create_household">Create Household</string>
+    <string name="create_household_prompt">New here? Create a household →</string>
+    <string name="household_name">Household Name</string>
+    <string name="setup_household">Set up your household</string>
+    <string name="setup_household_subtitle">All family members will share this pantry.</string>
+
+    <!-- Nav tabs -->
+    <string name="nav_dashboard">Dashboard</string>
+    <string name="nav_pantry">Pantry</string>
+    <string name="nav_shopping">Shopping</string>
+    <string name="nav_meals">Meals</string>
+    <string name="nav_members">Members</string>
+
+    <!-- Dashboard -->
+    <string name="overview">Overview</string>
+    <string name="total_items">Total Items</string>
+    <string name="low_out_stock">Low / Out</string>
+    <string name="expiring_soon">Expiring Soon</string>
+    <string name="shopping_list">Shopping List</string>
+    <string name="recent_activity">Recent activity</string>
+    <string name="pantry_empty_hint">Your pantry is empty. Add your first item!</string>
+
+    <!-- Pantry -->
+    <string name="search_items">Search items…</string>
+    <string name="add_to_pantry">Add to Pantry</string>
+    <string name="item_name">Item name</string>
+    <string name="category">Category</string>
+    <string name="quantity">Quantity</string>
+    <string name="unit">Unit</string>
+    <string name="min_threshold">Min threshold (alert below this)</string>
+    <string name="pantry_empty">Your pantry is empty.\nTap + to add your first item.</string>
+
+    <!-- Shopping -->
+    <string name="auto_populate">Auto-populate from pantry</string>
+    <string name="shopping_empty">Your list is empty.\nTap + or use auto-populate.</string>
+
+    <!-- Common -->
+    <string name="save">Save</string>
+    <string name="cancel">Cancel</string>
+    <string name="offline_banner">⚠ Offline — changes will sync when reconnected</string>
 </resources>

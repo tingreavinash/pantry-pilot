@@ -13,15 +13,20 @@ import dagger.hilt.android.lifecycle.HiltViewModel;
 @HiltViewModel
 public class AuthViewModel extends ViewModel {
 
+    private final AuthRepository repo;
+
     public final MutableLiveData<FirebaseUser> currentUser = new MutableLiveData<>();
     public final MutableLiveData<String> error = new MutableLiveData<>();
     public final MutableLiveData<Boolean> loading = new MutableLiveData<>(false);
-    private final AuthRepository authRepo;
 
     @Inject
-    public AuthViewModel(AuthRepository authRepo) {
-        this.authRepo = authRepo;
-        authRepo.observeAuthState(currentUser);
+    public AuthViewModel(AuthRepository repo) {
+        this.repo = repo;
+        repo.observeAuthState(currentUser);
+    }
+
+    public boolean isLoggedIn() {
+        return repo.getCurrentUser() != null;
     }
 
     public void login(String email, String password) {
@@ -30,7 +35,7 @@ public class AuthViewModel extends ViewModel {
             return;
         }
         loading.setValue(true);
-        authRepo.login(email, password, new AuthRepository.AuthCallback() {
+        repo.login(email, password, new AuthRepository.AuthCallback() {
             @Override
             public void onSuccess() {
                 loading.postValue(false);
@@ -58,7 +63,7 @@ public class AuthViewModel extends ViewModel {
             return;
         }
         loading.setValue(true);
-        authRepo.signUp(householdName, email, password, new AuthRepository.AuthCallback() {
+        repo.signUp(householdName, email, password, new AuthRepository.AuthCallback() {
             @Override
             public void onSuccess() {
                 loading.postValue(false);
@@ -73,10 +78,6 @@ public class AuthViewModel extends ViewModel {
     }
 
     public void signOut() {
-        authRepo.signOut();
-    }
-
-    public boolean isLoggedIn() {
-        return authRepo.getCurrentUser() != null;
+        repo.signOut();
     }
 }

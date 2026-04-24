@@ -4,6 +4,7 @@ import androidx.lifecycle.MutableLiveData;
 
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.messaging.FirebaseMessaging;
 
@@ -19,6 +20,24 @@ public class AuthRepository {
     private final FirebaseAuth auth;
     private final FirebaseFirestore db;
     private final FirebaseMessaging messaging;
+
+    public void signUp(String householdName, String email, String password, AuthCallback callback) {
+        auth.createUserWithEmailAndPassword(email, password)
+                .addOnSuccessListener(result -> {
+                    String uid = result.getUser().getUid();
+                    Map<String, Object> doc = new HashMap<>();
+                    doc.put("householdName", householdName);
+                    doc.put("ownerEmail", email);
+                    doc.put("createdAt", FieldValue.serverTimestamp());
+                    db.collection("households").document(uid).set(doc)
+                            .addOnSuccessListener(v -> {
+                                registerFcmToken(uid);
+                                callback.onSuccess();
+                            })
+                            .addOnFailureListener(e -> callback.onError(e.getMessage()));
+                })
+                .addOnFailureListener(e -> callback.onError(e.getMessage()));
+    }
 
     @Inject
     public AuthRepository(FirebaseAuth auth, FirebaseFirestore db, FirebaseMessaging messaging) {
@@ -36,23 +55,15 @@ public class AuthRepository {
                 .addOnFailureListener(e -> callback.onError(e.getMessage()));
     }
 
-    public void signUp(String householdName, String email, String password, AuthCallback callback) {
-        auth.createUserWithEmailAndPassword(email, password)
-                .addOnSuccessListener(result -> {
-                    String uid = result.getUser().getUid();
-                    Map<String, Object> householdDoc = new HashMap<>();
-                    householdDoc.put("householdName", householdName);
-                    householdDoc.put("ownerEmail", email);
-                    householdDoc.put("createdAt", com.google.firebase.firestore.FieldValue.serverTimestamp());
-                    db.collection("households").document(uid)
-                            .set(householdDoc)
-                            .addOnSuccessListener(v -> {
-                                registerFcmToken(uid);
-                                callback.onSuccess();
-                            })
-                            .addOnFailureListener(e -> callback.onError(e.getMessage()));
-                })
-                .addOnFailureListener(e -> callback.onError(e.getMessage()));
+    private void registerFcmToken(String uid) {
+        messaging.getToken().addOnSuccessListener(token -> {
+            Map<String, Object> tokenDoc = new HashMap<>();
+            tokenDoc.put("token", token);
+            tokenDoc.put("platform", "android");
+            tokenDoc.put("updatedAt", FieldValue.serverTimestamp());
+            db.collection("households").document(uid)
+                    .collection("fcmTokens").document(token).set(tokenDoc);
+        });
     }
 
     public void signOut() {
@@ -65,18 +76,6 @@ public class AuthRepository {
 
     public void observeAuthState(MutableLiveData<FirebaseUser> liveData) {
         auth.addAuthStateListener(fa -> liveData.postValue(fa.getCurrentUser()));
-    }
-
-    private void registerFcmToken(String uid) {
-        messaging.getToken().addOnSuccessListener(token -> {
-            Map<String, Object> tokenDoc = new HashMap<>();
-            tokenDoc.put("token", token);
-            tokenDoc.put("platform", "android");
-            tokenDoc.put("updatedAt", com.google.firebase.firestore.FieldValue.serverTimestamp());
-            db.collection("households").document(uid)
-                    .collection("fcmTokens").document(token)
-                    .set(tokenDoc);
-        });
     }
 
     public interface AuthCallback {

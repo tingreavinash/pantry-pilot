@@ -2,10 +2,10 @@ package com.pantrypilot.data.firebase;
 
 import androidx.lifecycle.MutableLiveData;
 
-import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
+import com.google.firebase.firestore.Source;
 import com.google.firebase.firestore.WriteBatch;
 import com.pantrypilot.data.model.PantryItem;
 import com.pantrypilot.data.model.ShoppingItem;
@@ -22,16 +22,16 @@ import javax.inject.Singleton;
 public class ShoppingRepository {
 
     private final FirebaseFirestore db;
-    private ListenerRegistration shoppingListener;
+    private ListenerRegistration listener;
 
     @Inject
     public ShoppingRepository(FirebaseFirestore db) {
         this.db = db;
     }
 
-    public void subscribeShoppingItems(String uid, MutableLiveData<List<ShoppingItem>> liveData) {
-        if (shoppingListener != null) shoppingListener.remove();
-        shoppingListener = db.collection("households").document(uid)
+    public void subscribe(String uid, MutableLiveData<List<ShoppingItem>> liveData) {
+        if (listener != null) listener.remove();
+        listener = db.collection("households").document(uid)
                 .collection("shoppingList")
                 .orderBy("category")
                 .addSnapshotListener((snapshot, e) -> {
@@ -46,21 +46,21 @@ public class ShoppingRepository {
     }
 
     public void removeListener() {
-        if (shoppingListener != null) {
-            shoppingListener.remove();
-            shoppingListener = null;
+        if (listener != null) {
+            listener.remove();
+            listener = null;
         }
     }
 
     public void addItem(String uid, ShoppingItem item) {
         Map<String, Object> data = new HashMap<>();
         data.put("name", item.name);
-        data.put("category", item.category);
+        data.put("category", item.category != null ? item.category : "Other");
         data.put("quantity", item.quantity);
-        data.put("unit", item.unit);
+        data.put("unit", item.unit != null ? item.unit : "pcs");
         data.put("estimatedCost", item.estimatedCost);
         data.put("bought", false);
-        data.put("assignedTo", item.assignedTo);
+        data.put("assignedTo", item.assignedTo != null ? item.assignedTo : "");
         data.put("createdAt", FieldValue.serverTimestamp());
         db.collection("households").document(uid).collection("shoppingList").add(data);
     }
@@ -82,12 +82,9 @@ public class ShoppingRepository {
                 .collection("shoppingList").document(itemId).delete();
     }
 
-    /**
-     * Clear all bought items in a single batch
-     */
-    public void clearBoughtItems(String uid, List<ShoppingItem> allItems) {
+    public void clearBought(String uid, List<ShoppingItem> items) {
         WriteBatch batch = db.batch();
-        for (ShoppingItem item : allItems) {
+        for (ShoppingItem item : items) {
             if (item.bought) {
                 batch.delete(db.collection("households").document(uid)
                         .collection("shoppingList").document(item.id));
@@ -96,21 +93,13 @@ public class ShoppingRepository {
         batch.commit();
     }
 
-    /**
-     * Auto-populate: add pantry items below threshold that aren't already
-     * in the shopping list (name-based deduplication, case-insensitive).
-     */
-    public void autoPopulate(String uid, List<PantryItem> pantryItems,
-                             List<ShoppingItem> existingShoppingItems) {
+    public void autoPopulate(String uid, List<PantryItem> pantry, List<ShoppingItem> existing) {
         List<String> existingNames = new ArrayList<>();
-        for (ShoppingItem s : existingShoppingItems) {
-            existingNames.add(s.name.toLowerCase().trim());
-        }
+        for (ShoppingItem s : existing) existingNames.add(s.name.toLowerCase().trim());
+
         WriteBatch batch = db.batch();
-        boolean hasNewItems = false;
-        CollectionReference col = db.collection("households").document(uid)
-                .collection("shoppingList");
-        for (PantryItem p : pantryItems) {
+        boolean hasNew = false;
+        for (PantryItem p : pantry) {
             if (p.getStockStatus() != PantryItem.StockStatus.OK
                     && !existingNames.contains(p.name.toLowerCase().trim())) {
                 Map<String, Object> data = new HashMap<>();
@@ -122,10 +111,24 @@ public class ShoppingRepository {
                 data.put("bought", false);
                 data.put("assignedTo", "");
                 data.put("createdAt", FieldValue.serverTimestamp());
-                batch.set(col.document(), data);
-                hasNewItems = true;
+                batch.set(db.collection("households").document(uid)
+                        .collection("shoppingList").document(), data);
+                hasNew = true;
             }
         }
-        if (hasNewItems) batch.commit();
+        if (hasNew) batch.commit();
+    }
+
+    public void fetchOnce(String uid, MutableLiveData<List<ShoppingItem>> liveData) {
+        db.collection("households").document(uid).collection("shoppingList")
+                .whereEqualTo("bought", false)
+                .get(Source.CACHE)
+                .addOnSuccessListener(snapshot -> {
+                    List<ShoppingItem> items = snapshot.toObjects(ShoppingItem.class);
+                    for (int i = 0; i < snapshot.getDocuments().size(); i++) {
+                        items.get(i).id = snapshot.getDocuments().get(i).getId();
+                    }
+                    liveData.postValue(items);
+                });
     }
 }

@@ -6,10 +6,10 @@ import androidx.lifecycle.ViewModel;
 import com.google.firebase.auth.FirebaseAuth;
 import com.pantrypilot.data.firebase.PantryRepository;
 import com.pantrypilot.data.firebase.ShoppingRepository;
-import com.pantrypilot.data.model.Member;
 import com.pantrypilot.data.model.PantryItem;
 import com.pantrypilot.data.model.ShoppingItem;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import javax.inject.Inject;
@@ -19,27 +19,27 @@ import dagger.hilt.android.lifecycle.HiltViewModel;
 @HiltViewModel
 public class ShoppingViewModel extends ViewModel {
 
-    public final MutableLiveData<List<ShoppingItem>> shoppingItems = new MutableLiveData<>();
-    public final MutableLiveData<List<PantryItem>> pantryItems = new MutableLiveData<>();
-    public final MutableLiveData<List<Member>> members = new MutableLiveData<>();
     private final ShoppingRepository shoppingRepo;
     private final PantryRepository pantryRepo;
     private final FirebaseAuth auth;
+
+    public final MutableLiveData<List<ShoppingItem>> shoppingItems = new MutableLiveData<>(new ArrayList<>());
+    public final MutableLiveData<List<PantryItem>> pantryItems = new MutableLiveData<>(new ArrayList<>());
 
     @Inject
     public ShoppingViewModel(ShoppingRepository sr, PantryRepository pr, FirebaseAuth auth) {
         this.shoppingRepo = sr;
         this.pantryRepo = pr;
         this.auth = auth;
-        String uid = auth.getCurrentUser() != null ? auth.getCurrentUser().getUid() : "";
-        if (!uid.isEmpty()) {
-            shoppingRepo.subscribeShoppingItems(uid, shoppingItems);
-            pantryRepo.subscribePantryItems(uid, pantryItems);
+        String uid = uid();
+        if (uid != null) {
+            shoppingRepo.subscribe(uid, shoppingItems);
+            pantryRepo.subscribe(uid, pantryItems);
         }
     }
 
     private String uid() {
-        return auth.getCurrentUser().getUid();
+        return auth.getCurrentUser() != null ? auth.getCurrentUser().getUid() : null;
     }
 
     public void toggleBought(ShoppingItem item) {
@@ -56,7 +56,7 @@ public class ShoppingViewModel extends ViewModel {
 
     public void clearBought() {
         List<ShoppingItem> items = shoppingItems.getValue();
-        if (items != null) shoppingRepo.clearBoughtItems(uid(), items);
+        if (items != null) shoppingRepo.clearBought(uid(), items);
     }
 
     public void autoPopulate() {

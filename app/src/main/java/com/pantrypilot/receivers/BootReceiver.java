@@ -18,12 +18,9 @@ import java.util.List;
 
 public class BootReceiver extends BroadcastReceiver {
 
-    private static final String TAG = "BootReceiver";
-
     @Override
     public void onReceive(Context context, Intent intent) {
         if (!Intent.ACTION_BOOT_COMPLETED.equals(intent.getAction())) return;
-
         new Thread(() -> {
             try {
                 List<GroceryStoreEntity> stores =
@@ -42,21 +39,19 @@ public class BootReceiver extends BroadcastReceiver {
 
                 GeofencingRequest request = new GeofencingRequest.Builder()
                         .setInitialTrigger(GeofencingRequest.INITIAL_TRIGGER_ENTER)
-                        .addGeofences(geofences)
-                        .build();
+                        .addGeofences(geofences).build();
 
                 Intent geofenceIntent = new Intent(context, GeofenceBroadcastReceiver.class);
-                PendingIntent pendingIntent = PendingIntent.getBroadcast(context, 0,
-                        geofenceIntent,
+                PendingIntent pi = PendingIntent.getBroadcast(context, 0, geofenceIntent,
                         PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_MUTABLE);
 
                 GeofencingClient client = LocationServices.getGeofencingClient(context);
-                client.addGeofences(request, pendingIntent)
-                        .addOnSuccessListener(v -> Log.d(TAG, "Geofences re-registered after boot"))
-                        .addOnFailureListener(e -> Log.w(TAG, "Failed to re-register geofences", e));
+                client.addGeofences(request, pi)
+                        .addOnSuccessListener(v -> Log.d("BootReceiver", "Geofences restored"))
+                        .addOnFailureListener(e -> Log.w("BootReceiver", "Geofence restore failed", e));
 
             } catch (Exception e) {
-                Log.e(TAG, "BootReceiver error", e);
+                Log.e("BootReceiver", "Error", e);
             }
         }).start();
     }

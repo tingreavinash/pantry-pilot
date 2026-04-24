@@ -17,16 +17,16 @@ import javax.inject.Singleton;
 public class MemberRepository {
 
     private final FirebaseFirestore db;
-    private ListenerRegistration memberListener;
+    private ListenerRegistration listener;
 
     @Inject
     public MemberRepository(FirebaseFirestore db) {
         this.db = db;
     }
 
-    public void subscribeMembers(String uid, MutableLiveData<List<Member>> liveData) {
-        if (memberListener != null) memberListener.remove();
-        memberListener = db.collection("households").document(uid)
+    public void subscribe(String uid, MutableLiveData<List<Member>> liveData) {
+        if (listener != null) listener.remove();
+        listener = db.collection("households").document(uid)
                 .collection("members")
                 .addSnapshotListener((snapshot, e) -> {
                     if (snapshot != null) {
@@ -40,9 +40,9 @@ public class MemberRepository {
     }
 
     public void removeListener() {
-        if (memberListener != null) {
-            memberListener.remove();
-            memberListener = null;
+        if (listener != null) {
+            listener.remove();
+            listener = null;
         }
     }
 
@@ -50,15 +50,11 @@ public class MemberRepository {
         Map<String, Object> data = new HashMap<>();
         data.put("name", member.name);
         data.put("avatarEmoji", member.avatarEmoji);
-        db.collection("households").document(uid)
-                .collection("members")
-                .add(data);
+        db.collection("households").document(uid).collection("members").add(data);
     }
 
     public void deleteMember(String uid, String memberId) {
         db.collection("households").document(uid)
-                .collection("members")
-                .document(memberId)
-                .delete();
+                .collection("members").document(memberId).delete();
     }
 }
